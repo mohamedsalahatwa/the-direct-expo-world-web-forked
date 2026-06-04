@@ -45,61 +45,87 @@ jobs:
         run: npm run build
 
       # ──────────────────────────────────────────────────────────────
-      # DIAGNOSTICS: figure out WHY dist exceeds Azure's 500 MiB limit.
-      # Everything is also written to the GitHub Actions Job Summary so
-      # it can be shared with the frontend engineer.
+      # OPTIMIZE assets in the built dist so it fits Azure's 500 MiB cap.
+      # Non-destructive: only touches dist, never the source assets.
+      #  - GLB: Draco mesh compression + WebP textures @ 2K
+      #  - loose .jpg/.png in .gltf folders: resize to 2K in place
       # ──────────────────────────────────────────────────────────────
+      - name: Optimize 3D assets to fit Azure SWA limit
+        working-directory: apps/web/dist
+        run: |
+          echo "== Before =="
+          du -sh .
+
+          npm install -g @gltf-transform/cli
+
+          echo "== Optimizing GLB models (Draco + WebP @2K) =="
+          find . -type f -name '*.glb' | while read -r f; do
+            before=$(du -h "$f" | cut -f1)
+            tmp="${f%.glb}.__opt.glb"
+            if gltf-transform optimize "$f" "$tmp" \
+                 --compress draco \
+                 --texture-compress webp \
+                 --texture-size 2048 2>/dev/null; then
+              mv "$tmp" "$f"
+              echo "  ✓ $f: $before -> $(du -h "$f" | cut -f1)"
+            else
+              rm -f "$tmp"
+              echo "  ! $f: optimize failed, kept original ($before)"
+            fi
+          done
+
+          echo "== Optimizing standalone .gltf models (Draco + WebP @2K) =="
+          # entry .gltf files (type f, not the .gltf-named folders)
+          find . -type f -name '*.gltf' | while read -r f; do
+            before=$(du -sh "$(dirname "$f")" | cut -f1)
+            tmp="${f%.gltf}.__opt.gltf"
+            if gltf-transform optimize "$f" "$tmp" \
+                 --compress draco \
+                 --texture-compress webp \
+                 --texture-size 2048 2>/dev/null; then
+              mv "$tmp" "$f"
+              echo "  ✓ $f (folder $before -> $(du -sh "$(dirname "$f")" | cut -f1))"
+            else
+              rm -f "$tmp"
+              echo "  ! $f: gltf-transform failed; falling back to plain texture resize"
+            fi
+          done
+
+          echo "== Safety net: resize any remaining large loose textures in place =="
+          find . -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) | while read -r img; do
+            mogrify -resize '2048x2048>' -quality 82 "$img" 2>/dev/null || true
+          done
+
+          echo "== After =="
+          du -sh .
+
       - name: Diagnose dist size
         run: |
-          DIST="apps/web/dist"
-          LIMIT=524288000   # Azure SWA hard limit: 500 MiB
-          SUMMARY="$GITHUB_STEP_SUMMARY"
-
+          DIST="apps/web/dist"; LIMIT=524288000; SUMMARY="$GITHUB_STEP_SUMMARY"
           TOTAL_BYTES=$(du -sb "$DIST" | cut -f1)
           TOTAL_HUMAN=$(du -sh "$DIST" | cut -f1)
-
           {
-            echo "# 📦 Azure SWA Deploy — Bundle Size Report"
+            echo "# 📦 Bundle Size Report (post-optimization)"
             echo ""
-            echo "**Total \`dist\` size:** \`$TOTAL_HUMAN\` ($TOTAL_BYTES bytes)"
-            echo "**Azure SWA limit:** \`500 MiB\` ($LIMIT bytes)"
+            echo "**Total dist:** \`$TOTAL_HUMAN\` ($TOTAL_BYTES bytes) — limit 500 MiB ($LIMIT)"
             if [ "$TOTAL_BYTES" -gt "$LIMIT" ]; then
-              OVER=$(( TOTAL_BYTES - LIMIT ))
-              echo "**Status:** ❌ OVER LIMIT by $(( OVER / 1048576 )) MiB — deploy will be rejected."
+              echo "**Status:** ❌ still over by $(( (TOTAL_BYTES - LIMIT) / 1048576 )) MiB"
             else
-              echo "**Status:** ✅ Under limit."
+              echo "**Status:** ✅ under limit ($(( (LIMIT - TOTAL_BYTES) / 1048576 )) MiB headroom)"
             fi
             echo ""
-
-            echo "## Size by file type"
+            echo "## Top 30 largest files"
             echo '```'
-            find "$DIST" -type f | sed 's/.*\.//' | sort | uniq -c | sort -rn \
-              | while read -r count ext; do
-                  bytes=$(find "$DIST" -type f -name "*.$ext" -printf '%s\n' | awk '{s+=$1} END{print s+0}')
-                  printf "%6d files  %8.1f MB  .%s\n" "$count" "$(echo "$bytes/1048576" | bc -l)" "$ext"
-                done
-            echo '```'
-            echo ""
-
-            echo "## Top 40 largest files"
-            echo '```'
-            find "$DIST" -type f -printf '%s\t%p\n' | sort -rn | head -40 \
+            find "$DIST" -type f -printf '%s\t%p\n' | sort -rn | head -30 \
               | awk -F'\t' '{printf "%8.1f MB\t%s\n", $1/1048576, $2}'
-            echo '```'
-            echo ""
-
-            echo "## Size by top-level folder in dist"
-            echo '```'
-            du -h --max-depth=2 "$DIST" | sort -rh | head -30
             echo '```'
           } | tee "$SUMMARY"
 
       - name: Fail if dist exceeds Azure limit
         run: |
           TOTAL_BYTES=$(du -sb apps/web/dist | cut -f1)
-          LIMIT=524288000
-          if [ "$TOTAL_BYTES" -gt "$LIMIT" ]; then
-            echo "::error::dist is $(( TOTAL_BYTES / 1048576 )) MiB, over the 500 MiB Azure SWA limit. See the Job Summary for the breakdown. Deploy skipped."
+          if [ "$TOTAL_BYTES" -gt 524288000 ]; then
+            echo "::error::dist is $(( TOTAL_BYTES / 1048576 )) MiB, still over 500 MiB. See Job Summary."
             exit 1
           fi
 
