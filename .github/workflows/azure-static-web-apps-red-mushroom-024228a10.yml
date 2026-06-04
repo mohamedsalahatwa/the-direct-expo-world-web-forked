@@ -17,7 +17,11 @@ jobs:
           node-version: 20
 
       # ✅ install inside web only
-      - name: Install deps
+      - name: Install shared deps
+        working-directory: packages/shared
+        run: npm install zod
+
+      - name: Install web deps
         working-directory: apps/web
         run: npm install
 
