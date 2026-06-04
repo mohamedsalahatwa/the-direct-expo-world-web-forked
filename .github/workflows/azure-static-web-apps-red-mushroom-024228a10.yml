@@ -44,9 +44,64 @@ jobs:
         working-directory: apps/web
         run: npm run build
 
-      # Sanity check: print the size of what we're about to upload
-      - name: Show dist size
-        run: du -sh apps/web/dist
+      # ──────────────────────────────────────────────────────────────
+      # DIAGNOSTICS: figure out WHY dist exceeds Azure's 500 MiB limit.
+      # Everything is also written to the GitHub Actions Job Summary so
+      # it can be shared with the frontend engineer.
+      # ──────────────────────────────────────────────────────────────
+      - name: Diagnose dist size
+        run: |
+          DIST="apps/web/dist"
+          LIMIT=524288000   # Azure SWA hard limit: 500 MiB
+          SUMMARY="$GITHUB_STEP_SUMMARY"
+
+          TOTAL_BYTES=$(du -sb "$DIST" | cut -f1)
+          TOTAL_HUMAN=$(du -sh "$DIST" | cut -f1)
+
+          {
+            echo "# 📦 Azure SWA Deploy — Bundle Size Report"
+            echo ""
+            echo "**Total \`dist\` size:** \`$TOTAL_HUMAN\` ($TOTAL_BYTES bytes)"
+            echo "**Azure SWA limit:** \`500 MiB\` ($LIMIT bytes)"
+            if [ "$TOTAL_BYTES" -gt "$LIMIT" ]; then
+              OVER=$(( TOTAL_BYTES - LIMIT ))
+              echo "**Status:** ❌ OVER LIMIT by $(( OVER / 1048576 )) MiB — deploy will be rejected."
+            else
+              echo "**Status:** ✅ Under limit."
+            fi
+            echo ""
+
+            echo "## Size by file type"
+            echo '```'
+            find "$DIST" -type f | sed 's/.*\.//' | sort | uniq -c | sort -rn \
+              | while read -r count ext; do
+                  bytes=$(find "$DIST" -type f -name "*.$ext" -printf '%s\n' | awk '{s+=$1} END{print s+0}')
+                  printf "%6d files  %8.1f MB  .%s\n" "$count" "$(echo "$bytes/1048576" | bc -l)" "$ext"
+                done
+            echo '```'
+            echo ""
+
+            echo "## Top 40 largest files"
+            echo '```'
+            find "$DIST" -type f -printf '%s\t%p\n' | sort -rn | head -40 \
+              | awk -F'\t' '{printf "%8.1f MB\t%s\n", $1/1048576, $2}'
+            echo '```'
+            echo ""
+
+            echo "## Size by top-level folder in dist"
+            echo '```'
+            du -h --max-depth=2 "$DIST" | sort -rh | head -30
+            echo '```'
+          } | tee "$SUMMARY"
+
+      - name: Fail if dist exceeds Azure limit
+        run: |
+          TOTAL_BYTES=$(du -sb apps/web/dist | cut -f1)
+          LIMIT=524288000
+          if [ "$TOTAL_BYTES" -gt "$LIMIT" ]; then
+            echo "::error::dist is $(( TOTAL_BYTES / 1048576 )) MiB, over the 500 MiB Azure SWA limit. See the Job Summary for the breakdown. Deploy skipped."
+            exit 1
+          fi
 
       - name: Deploy
         uses: Azure/static-web-apps-deploy@v1
@@ -54,8 +109,8 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_RED_MUSHROOM_024228A10 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
-          app_location: "apps/web/dist"   # ← upload ONLY the built output
-          output_location: ""             # ← do not append anything
+          app_location: "apps/web/dist"
+          output_location: ""
           skip_app_build: true
 
   close_pull_request_job:
