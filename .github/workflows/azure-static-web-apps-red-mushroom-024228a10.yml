@@ -9,7 +9,6 @@ on:
 
 jobs:
   build_and_deploy_job:
-    # Run on push, or on PRs that are NOT just being closed
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy
@@ -24,36 +23,30 @@ jobs:
         with:
           node-version: 20
 
-      # ──────────────────────────────────────────────
-      # GUARD: fail early with a clear message if the
-      # deployment token secret is missing or empty
-      # (covers: secret name mismatch, forked repo, etc.)
-      # ──────────────────────────────────────────────
       - name: Check deployment token is set
         run: |
           if [ -z "${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_RED_MUSHROOM_024228A10 }}" ]; then
             echo "::error::Deployment token secret is EMPTY."
-            echo "Causes: (1) secret name does not match exactly, (2) this is a fork (secrets are not copied to forks), or (3) the secret was never added."
-            echo "Fix: GitHub → Settings → Secrets and variables → Actions → add 'AZURE_STATIC_WEB_APPS_API_TOKEN_RED_MUSHROOM_024228A10' with the token from Azure Portal → your Static Web App → Manage deployment token."
             exit 1
           else
             echo "✅ Deployment token secret is present."
           fi
 
-      # ✅ install shared deps
       - name: Install shared deps
         working-directory: packages/shared
         run: npm install zod
 
-      # ✅ install web deps
       - name: Install web deps
         working-directory: apps/web
         run: npm install
 
-      # ✅ build inside web only
       - name: Build
         working-directory: apps/web
         run: npm run build
+
+      # Sanity check: print the size of what we're about to upload
+      - name: Show dist size
+        run: du -sh apps/web/dist
 
       - name: Deploy
         uses: Azure/static-web-apps-deploy@v1
@@ -61,8 +54,8 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_RED_MUSHROOM_024228A10 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
-          app_location: "apps/web"
-          output_location: "dist"
+          app_location: "apps/web/dist"   # ← upload ONLY the built output
+          output_location: ""             # ← do not append anything
           skip_app_build: true
 
   close_pull_request_job:
