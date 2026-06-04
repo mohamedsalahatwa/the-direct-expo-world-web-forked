@@ -24,21 +24,26 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
-        working-directory: ./apps/web
+      # ✅ Install ALL workspace dependencies from root (IMPORTANT FIX)
+      - name: Install dependencies (monorepo)
         run: npm install
 
-      - name: Build project
-        working-directory: ./apps/web
-        run: npm run build
+      # ✅ Build ONLY web workspace
+      - name: Build web app
+        run: npm run build --workspace=@immersive/web
 
-      - name: Deploy to Azure Static Web Apps
+      # Optional debug (you can remove)
+      - name: List build output
+        run: ls -la apps/web/dist || true
+
+      # ✅ Deploy to Azure Static Web Apps
+      - name: Deploy
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_RED_MUSHROOM_024228A10 }}
           action: upload
 
-          app_location: "./apps/web"
+          app_location: "apps/web"
           output_location: "dist"
 
           skip_app_build: true
@@ -48,7 +53,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Close Pull Request
+      - name: Close PR
         uses: Azure/static-web-apps-deploy@v1
         with:
           action: close
