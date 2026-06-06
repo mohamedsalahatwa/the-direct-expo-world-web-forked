@@ -1,7 +1,7 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { ExtrudeGeometry, Shape, type Group } from "three";
-import { BRAND, makeText3D } from "./brand3d";
+import { BRAND } from "./brand3d";
 
 // Plaque silhouette (matches the reference: a banner slab with a slanted top —
 // tall right edge, shorter left edge).
@@ -67,9 +67,6 @@ export function ByitLogo({
     return geo;
   }, []);
 
-  // "Byit" raised proud of the front face, sat in the lower-middle visual mass.
-  const textGeo = useMemo(() => makeText3D("Byit", { size: 0.92, depth: 0.18, bevel: 0.018 }), []);
-
   useFrame((state, delta) => {
     const g = ref.current;
     if (!g) return;
@@ -104,11 +101,6 @@ export function ByitLogo({
         {/* orange extruded plaque */}
         <mesh geometry={plaqueGeo} castShadow receiveShadow>
           <meshStandardMaterial color={BRAND.ORANGE} roughness={0.42} metalness={0.08} envMapIntensity={1.0} />
-        </mesh>
-
-        {/* "Byit" on the front face (front of plaque ≈ +DEPTH/2 + bevel) */}
-        <mesh geometry={textGeo} position={[0, -0.12, DEPTH / 2 + 0.05]} castShadow>
-          <meshStandardMaterial color={BRAND.CREAM} roughness={0.35} metalness={0.05} envMapIntensity={1.0} />
         </mesh>
       </group>
     </group>

@@ -100,13 +100,13 @@ export function GlbModel({
 
 // --- Asset URLs (served from /public) -------------------------------------
 export const GLB = {
-  receptionDesk: "/models/reception_desk_diarama.glb",
-  sofa: "/models/victorian_lounge_sofa.glb",
-  coffeeTable: "/models/living_room_tables.glb",
-  chair: "/models/gothic_chair.glb",
-  plant: "/models/house_plant.glb",
-  tvMain: "/models/sony_bravia_xr-77a80l_oled_tv.glb",
-  tvRoom: "/models/tv_lg_oled_8k.glb",
+  receptionDesk: "/models/reception_desk_diarama_optimized.glb",
+  sofa: "/models/victorian_lounge_sofa_optimized.glb",
+  coffeeTable: "/models/living_room_tables_optimized.glb",
+  chair: "/models/gothic_chair_optimized.glb",
+  plant: "/models/house_plant_optimized.glb",
+  tvMain: "/models/sony_bravia_xr-77a80l_oled_tv_optimized.glb",
+  tvRoom: "/models/tv_lg_oled_8k_optimized.glb",
 } as const;
 
 // NB: we deliberately do NOT eager-preload these heavy GLBs at import time —
