@@ -126,7 +126,8 @@ export function Scene({
       {/* Studio HDRI → neutral ambient fill + realistic reflections. It carries
           most of the soft ambient, so the explicit fill lights below stay low.
           Sky stays hidden so the gallery reads as an indoor space. */}
-      <SceneEnvironment intensity={0.85} />
+      {/* TEMPORARILY DISABLED — checking something. Re-enable when done. */}
+      {/* <SceneEnvironment intensity={0.85} /> */}
 
       {/* Gentle ambient/sky fill — kept low since the HDRI provides most of it. */}
       <ambientLight intensity={0.18} />
