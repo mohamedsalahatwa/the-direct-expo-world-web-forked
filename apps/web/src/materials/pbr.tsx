@@ -5,7 +5,6 @@ import {
   Color,
   FrontSide,
   MeshStandardMaterial,
-  NoColorSpace,
   RepeatWrapping,
   SRGBColorSpace,
   type Side,
@@ -17,11 +16,11 @@ import { MODELS_BASE_URL } from "../assetBase";
 /**
  * PBR material library for the exhibition.
  *
- * Four Poly Haven 4K texture sets — marble, wood, carpet, metal — are loaded
- * once and turned into reusable MeshStandardMaterials. Poly Haven ships an
- * "ARM" map that packs Ambient-Occlusion (R), Roughness (G) and Metalness (B)
- * into one image, so a single ARM texture drives aoMap + roughnessMap +
- * metalnessMap (all sampling UV channel 0, which is the default in three 0.172).
+ * Five 1K diffuse texture sets — marble, wood, carpet, metal, OSB — are loaded
+ * once and turned into reusable MeshStandardMaterials. Only the diffuse (colour)
+ * map is used; normal and ARM maps are intentionally omitted to cut payload and
+ * GPU uploads, so surfaces are shaded as plain matte materials (metalness 0,
+ * roughness 0.9 by default) tinted by the per-call colour.
  *
  * Performance: a material is built once per (kind, tiling, …options) key and
  * memoised, so the 30 identical booths all share the *same* wood/carpet/metal
@@ -46,7 +45,8 @@ export interface PbrOptions {
   opacity?: number;
   /** Strength of IBL reflections from the scene environment. */
   envMapIntensity?: number;
-  /** Normal map strength. */
+  /** @deprecated No-op since materials are diffuse-only (no normal map). Kept
+   *  for call-site compatibility. */
   normalScale?: number;
 }
 
@@ -55,42 +55,26 @@ export interface PbrOptions {
 // textures that gate the loading screen — pointing them at a remote CDN means
 // first paint now waits on those fetches, so a fast/edge-cached CDN matters here.
 const BASE = MODELS_BASE_URL;
-const SETS: Record<PbrKind, { diff: string; nor: string; arm: string }> = {
-  marble: {
-    diff: `${BASE}/marble_cliff_05_diff_4k.jpg`,
-    nor: `${BASE}/marble_cliff_05_nor_gl_4k.jpg`,
-    arm: `${BASE}/marble_cliff_05_arm_4k.jpg`,
-  },
-  wood: {
-    diff: `${BASE}/wooden_panels_diff_4k.jpg`,
-    nor: `${BASE}/wooden_panels_nor_gl_4k.jpg`,
-    arm: `${BASE}/wooden_panels_arm_4k.jpg`,
-  },
-  carpet: {
-    diff: `${BASE}/dirty_carpet_diff_4k.jpg`,
-    nor: `${BASE}/dirty_carpet_nor_gl_4k.jpg`,
-    arm: `${BASE}/dirty_carpet_arm_4k.jpg`,
-  },
-  metal: {
-    diff: `${BASE}/corrugated_iron_diff_4k.jpg`,
-    nor: `${BASE}/corrugated_iron_nor_gl_4k.jpg`,
-    arm: `${BASE}/corrugated_iron_arm_4k.jpg`,
-  },
+// Diffuse-only 1K sets: we load just the colour map for each kind (no normal /
+// ARM maps). Smaller payload + fewer GPU uploads; surfaces are shaded as plain
+// matte materials driven by the diffuse colour (see metalness/roughness defaults
+// in getMaterial below).
+const SETS: Record<PbrKind, { diff: string }> = {
+  marble: { diff: `${BASE}/marble_cliff_05_diff_1k.jpg` },
+  wood: { diff: `${BASE}/wooden_panels_diff_1k.jpg` },
+  carpet: { diff: `${BASE}/dirty_carpet_diff_1k.jpg` },
+  metal: { diff: `${BASE}/corrugated_iron_diff_1k.jpg` },
   // Oriented strand board — used for the developer booth room walls.
-  osb: {
-    diff: `${BASE}/oriented_strand_board_diff_4k.jpg`,
-    nor: `${BASE}/oriented_strand_board_nor_gl_4k.jpg`,
-    arm: `${BASE}/oriented_strand_board_arm_4k.jpg`,
-  },
+  osb: { diff: `${BASE}/oriented_strand_board_diff_1k.jpg` },
 };
 
 // Flat URL map for a single useTexture() call (keeps load/suspense in one place).
 const URL_MAP = {
-  marbleDiff: SETS.marble.diff, marbleNor: SETS.marble.nor, marbleArm: SETS.marble.arm,
-  woodDiff: SETS.wood.diff, woodNor: SETS.wood.nor, woodArm: SETS.wood.arm,
-  carpetDiff: SETS.carpet.diff, carpetNor: SETS.carpet.nor, carpetArm: SETS.carpet.arm,
-  metalDiff: SETS.metal.diff, metalNor: SETS.metal.nor, metalArm: SETS.metal.arm,
-  osbDiff: SETS.osb.diff, osbNor: SETS.osb.nor, osbArm: SETS.osb.arm,
+  marbleDiff: SETS.marble.diff,
+  woodDiff: SETS.wood.diff,
+  carpetDiff: SETS.carpet.diff,
+  metalDiff: SETS.metal.diff,
+  osbDiff: SETS.osb.diff,
 } as const;
 
 interface PbrLibrary {
@@ -113,20 +97,20 @@ export function PbrProvider({ children }: { children: ReactNode }) {
   const library = useMemo<PbrLibrary>(() => {
     const anisotropy = Math.min(8, gl.capabilities.getMaxAnisotropy());
 
-    // Configure each base texture once; clones inherit these settings.
-    const prep = (t: Texture, srgb: boolean) => {
-      t.colorSpace = srgb ? SRGBColorSpace : NoColorSpace;
+    // Configure each diffuse base texture once; clones inherit these settings.
+    const prep = (t: Texture) => {
+      t.colorSpace = SRGBColorSpace; // diffuse/colour maps are sRGB
       t.wrapS = t.wrapT = RepeatWrapping;
       t.anisotropy = anisotropy;
       return t;
     };
 
-    const bases: Record<PbrKind, { diff: Texture; nor: Texture; arm: Texture }> = {
-      marble: { diff: prep(tex.marbleDiff, true), nor: prep(tex.marbleNor, false), arm: prep(tex.marbleArm, false) },
-      wood: { diff: prep(tex.woodDiff, true), nor: prep(tex.woodNor, false), arm: prep(tex.woodArm, false) },
-      carpet: { diff: prep(tex.carpetDiff, true), nor: prep(tex.carpetNor, false), arm: prep(tex.carpetArm, false) },
-      metal: { diff: prep(tex.metalDiff, true), nor: prep(tex.metalNor, false), arm: prep(tex.metalArm, false) },
-      osb: { diff: prep(tex.osbDiff, true), nor: prep(tex.osbNor, false), arm: prep(tex.osbArm, false) },
+    const bases: Record<PbrKind, { diff: Texture }> = {
+      marble: { diff: prep(tex.marbleDiff) },
+      wood: { diff: prep(tex.woodDiff) },
+      carpet: { diff: prep(tex.carpetDiff) },
+      metal: { diff: prep(tex.metalDiff) },
+      osb: { diff: prep(tex.osbDiff) },
     };
 
     const cache = new Map<string, MeshStandardMaterial>();
@@ -149,31 +133,25 @@ export function PbrProvider({ children }: { children: ReactNode }) {
         options.transparent ? 1 : 0,
         options.opacity ?? 1,
         options.envMapIntensity ?? 0.85,
-        options.normalScale ?? 1,
       ].join("|");
 
       const cached = cache.get(key);
       if (cached) return cached;
 
       const b = bases[kind];
-      const arm = cloneTiled(b.arm, rx, ry);
       const material = new MeshStandardMaterial({
         map: cloneTiled(b.diff, rx, ry),
-        normalMap: cloneTiled(b.nor, rx, ry),
-        // One ARM texture → AO (R) + Roughness (G) + Metalness (B).
-        aoMap: arm,
-        roughnessMap: arm,
-        metalnessMap: arm,
-        roughness: options.roughness ?? 1,
-        metalness: options.metalness ?? 1,
+        // Diffuse-only: no normal/ARM maps, so metalness/roughness are plain
+        // scalars. Default to a matte non-metal so colour maps read correctly
+        // (the old metalness:1 default only worked because the ARM map zeroed it).
+        roughness: options.roughness ?? 0.9,
+        metalness: options.metalness ?? 0,
         envMapIntensity: options.envMapIntensity ?? 0.85,
         side: options.side ?? FrontSide,
         transparent: options.transparent ?? false,
         opacity: options.opacity ?? 1,
         color: new Color(options.color ?? "#ffffff"),
       });
-      const ns = options.normalScale ?? 1;
-      material.normalScale.set(ns, ns);
 
       cache.set(key, material);
       return material;
@@ -194,7 +172,7 @@ export function usePbrMaterial(kind: PbrKind, options?: PbrOptions): MeshStandar
 
 /**
  * Eagerly warm drei's loader cache with the *essential* startup textures (the
- * 15 PBR maps + the signage logo) before the Canvas mounts and the WebGL
+ * 5 diffuse maps + the signage logo) before the Canvas mounts and the WebGL
  * context is built, so the network fetch overlaps context creation and the hall
  * paints sooner. Safe to call once at boot — PbrProvider/useTexture reuse these
  * cached results instead of re-fetching.

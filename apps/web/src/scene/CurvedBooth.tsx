@@ -6,6 +6,7 @@ import type { Developer } from "./developers";
 import { Plant, Armchair, RoundTable } from "./props";
 import { usePbrMaterial } from "../materials/pbr";
 import { GlbModel, GLB } from "./GlbModel";
+import { RoomSign } from "./RoomSign";
 
 const CREAM = "#efe7d8";
 const R = 1.95; // curved-wall radius
@@ -100,6 +101,10 @@ function CurvedBoothImpl({
 
   return (
     <group>
+      {/* premium floating gold showroom sign above the room (grouped with the
+          booth so it travels if the booth moves; sits clear above the 2.6 m wall) */}
+      <RoomSign text={dev.name} glow={dev.color} height={3.35} size={0.42} />
+
       {/* selection ring on the floor at the booth opening */}
       <mesh position={[0, 0.04, 1.6]} rotation={[-Math.PI / 2, 0, 0]} visible={highlight}>
         <ringGeometry args={[2.15, 2.4, 48]} />

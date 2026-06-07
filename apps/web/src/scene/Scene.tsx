@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useThree } from "@react-three/fiber";
+import { useEffect, useRef } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, ContactShadows, useTexture, Text } from "@react-three/drei";
 import { Physics } from "@react-three/rapier";
 import { CurvedBooth } from "./CurvedBooth";
@@ -30,6 +30,33 @@ import {
 import { PbrProvider, usePbrMaterial } from "../materials/pbr";
 import { SceneEnvironment } from "../materials/SceneEnvironment";
 import logoUrl from "../assets/images/TDE_header.png";
+
+/**
+ * The scene is static (only the logo/signs animate), so re-rendering the shadow
+ * map every frame is pure waste. We turn off auto-update and render shadows only:
+ *  - during a short warm-up window after mount (so lazily-streamed GLB furniture
+ *    gets baked into the static shadow map as it pops in), and
+ *  - continuously while walking (the player + camera move, so dynamic shadows
+ *    matter up close).
+ * In the overview the shadow map is frozen → roughly halves per-frame GPU cost.
+ */
+function ShadowController({ walking }: { walking: boolean }) {
+  const gl = useThree((s) => s.gl);
+  const warmupEnd = useRef<number | null>(null);
+
+  useEffect(() => {
+    gl.shadowMap.autoUpdate = false;
+    gl.shadowMap.needsUpdate = true; // bake once immediately
+  }, [gl]);
+
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    if (warmupEnd.current === null) warmupEnd.current = t + 6; // ~6s GLB streaming
+    if (walking || t < warmupEnd.current) gl.shadowMap.needsUpdate = true;
+  });
+
+  return null;
+}
 
 function Hall() {
   const logo = useTexture(logoUrl);
@@ -129,6 +156,9 @@ export function Scene({
       {/* TEMPORARILY DISABLED — checking something. Re-enable when done. */}
       <SceneEnvironment intensity={0.85} />
 
+      {/* Freeze the shadow map in overview; keep it live while walking. */}
+      <ShadowController walking={walking} />
+
       {/* Gentle ambient/sky fill — kept low since the HDRI provides most of it. */}
       <ambientLight intensity={0.18} />
       <hemisphereLight args={["#fff6ec", "#34291c", 0.28]} />
@@ -140,7 +170,7 @@ export function Scene({
         intensity={1.6}
         color="#fff3e2"
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[1024, 1024]}
         shadow-bias={-0.00018}
         shadow-normalBias={0.035}
         shadow-radius={5}

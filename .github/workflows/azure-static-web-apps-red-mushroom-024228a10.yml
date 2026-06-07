@@ -47,8 +47,13 @@ jobs:
       # ──────────────────────────────────────────────────────────────
       # OPTIMIZE assets in the built dist so it fits Azure's 500 MiB cap.
       # Non-destructive: only touches dist, never the source assets.
-      #  - GLB: Draco mesh compression + WebP textures @ 2K
-      #  - loose .jpg/.png in .gltf folders: resize to 2K in place
+      #  - GLB: Draco mesh compression + WebP textures @ 1K
+      #  - loose .jpg/.png in .gltf folders: resize to 1K in place
+      #
+      # Texture size is the dominant runtime cost: a 2K texture decodes to ~16 MB
+      # of VRAM each (regardless of its compressed bytes), and a scene with ~30 of
+      # them pushes 400+ MB of VRAM + heavy main-thread decode → lag. 1K cuts that
+      # 4× (~4 MB each) and is plenty for furniture/props at the viewing distance.
       # ──────────────────────────────────────────────────────────────
       - name: Optimize 3D assets to fit Azure SWA limit
         working-directory: apps/web/dist
@@ -58,14 +63,14 @@ jobs:
 
           npm install -g @gltf-transform/cli
 
-          echo "== Optimizing GLB models (Draco + WebP @2K) =="
+          echo "== Optimizing GLB models (Draco + WebP @1K) =="
           find . -type f -name '*.glb' | while read -r f; do
             before=$(du -h "$f" | cut -f1)
             tmp="${f%.glb}.__opt.glb"
             if gltf-transform optimize "$f" "$tmp" \
                  --compress draco \
                  --texture-compress webp \
-                 --texture-size 2048 2>/dev/null; then
+                 --texture-size 1024 2>/dev/null; then
               mv "$tmp" "$f"
               echo "  ✓ $f: $before -> $(du -h "$f" | cut -f1)"
             else
@@ -74,7 +79,7 @@ jobs:
             fi
           done
 
-          echo "== Optimizing standalone .gltf models (Draco + WebP @2K) =="
+          echo "== Optimizing standalone .gltf models (Draco + WebP @1K) =="
           # entry .gltf files (type f, not the .gltf-named folders)
           find . -type f -name '*.gltf' | while read -r f; do
             before=$(du -sh "$(dirname "$f")" | cut -f1)
@@ -82,7 +87,7 @@ jobs:
             if gltf-transform optimize "$f" "$tmp" \
                  --compress draco \
                  --texture-compress webp \
-                 --texture-size 2048 2>/dev/null; then
+                 --texture-size 1024 2>/dev/null; then
               mv "$tmp" "$f"
               echo "  ✓ $f (folder $before -> $(du -sh "$(dirname "$f")" | cut -f1))"
             else
@@ -93,7 +98,7 @@ jobs:
 
           echo "== Safety net: resize any remaining large loose textures in place =="
           find . -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) | while read -r img; do
-            mogrify -resize '2048x2048>' -quality 82 "$img" 2>/dev/null || true
+            mogrify -resize '1024x1024>' -quality 82 "$img" 2>/dev/null || true
           done
 
           echo "== After =="
