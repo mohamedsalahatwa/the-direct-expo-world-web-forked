@@ -12,6 +12,7 @@ import {
   type Texture,
 } from "three";
 import logoUrl from "../assets/images/TDE_header.png";
+import { MODELS_BASE_URL } from "../assetBase";
 
 /**
  * PBR material library for the exhibition.
@@ -49,33 +50,37 @@ export interface PbrOptions {
   normalScale?: number;
 }
 
-const BASE = "/models";
+// Texture sets resolve from the shared asset base (remote CDN when configured,
+// else /public/models). NB: unlike the lazy GLBs, these are *essential* startup
+// textures that gate the loading screen — pointing them at a remote CDN means
+// first paint now waits on those fetches, so a fast/edge-cached CDN matters here.
+const BASE = MODELS_BASE_URL;
 const SETS: Record<PbrKind, { diff: string; nor: string; arm: string }> = {
   marble: {
-    diff: `${BASE}/marble_cliff_05_4k.gltf/textures/marble_cliff_05_diff_4k.jpg`,
-    nor: `${BASE}/marble_cliff_05_4k.gltf/textures/marble_cliff_05_nor_gl_4k.jpg`,
-    arm: `${BASE}/marble_cliff_05_4k.gltf/textures/marble_cliff_05_arm_4k.jpg`,
+    diff: `${BASE}/marble_cliff_05_diff_4k.jpg`,
+    nor: `${BASE}/marble_cliff_05_nor_gl_4k.jpg`,
+    arm: `${BASE}/marble_cliff_05_arm_4k.jpg`,
   },
   wood: {
-    diff: `${BASE}/wooden_panels_4k.gltf/textures/wooden_panels_diff_4k.jpg`,
-    nor: `${BASE}/wooden_panels_4k.gltf/textures/wooden_panels_nor_gl_4k.jpg`,
-    arm: `${BASE}/wooden_panels_4k.gltf/textures/wooden_panels_arm_4k.jpg`,
+    diff: `${BASE}/wooden_panels_diff_4k.jpg`,
+    nor: `${BASE}/wooden_panels_nor_gl_4k.jpg`,
+    arm: `${BASE}/wooden_panels_arm_4k.jpg`,
   },
   carpet: {
-    diff: `${BASE}/dirty_carpet_4k.gltf/textures/dirty_carpet_diff_4k.jpg`,
-    nor: `${BASE}/dirty_carpet_4k.gltf/textures/dirty_carpet_nor_gl_4k.jpg`,
-    arm: `${BASE}/dirty_carpet_4k.gltf/textures/dirty_carpet_arm_4k.jpg`,
+    diff: `${BASE}/dirty_carpet_diff_4k.jpg`,
+    nor: `${BASE}/dirty_carpet_nor_gl_4k.jpg`,
+    arm: `${BASE}/dirty_carpet_arm_4k.jpg`,
   },
   metal: {
-    diff: `${BASE}/corrugated_iron_4k.gltf/textures/corrugated_iron_diff_4k.jpg`,
-    nor: `${BASE}/corrugated_iron_4k.gltf/textures/corrugated_iron_nor_gl_4k.jpg`,
-    arm: `${BASE}/corrugated_iron_4k.gltf/textures/corrugated_iron_arm_4k.jpg`,
+    diff: `${BASE}/corrugated_iron_diff_4k.jpg`,
+    nor: `${BASE}/corrugated_iron_nor_gl_4k.jpg`,
+    arm: `${BASE}/corrugated_iron_arm_4k.jpg`,
   },
   // Oriented strand board — used for the developer booth room walls.
   osb: {
-    diff: `${BASE}/oriented_strand_board_4k.gltf/textures/oriented_strand_board_diff_4k.jpg`,
-    nor: `${BASE}/oriented_strand_board_4k.gltf/textures/oriented_strand_board_nor_gl_4k.jpg`,
-    arm: `${BASE}/oriented_strand_board_4k.gltf/textures/oriented_strand_board_arm_4k.jpg`,
+    diff: `${BASE}/oriented_strand_board_diff_4k.jpg`,
+    nor: `${BASE}/oriented_strand_board_nor_gl_4k.jpg`,
+    arm: `${BASE}/oriented_strand_board_arm_4k.jpg`,
   },
 };
 

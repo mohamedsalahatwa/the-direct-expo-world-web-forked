@@ -10,6 +10,7 @@ import {
   type WebGLRenderTarget,
 } from "three";
 import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader.js";
+import { MODELS_BASE_URL } from "../assetBase";
 
 /**
  * Loads an HDRI/EXR sky, converts it with PMREMGenerator and uses it as the
@@ -35,8 +36,8 @@ export function SceneEnvironment({
   intensity = 0.85,
   /** Tone-mapping exposure. */
   exposure = 1.0,
-  /** Path to the equirectangular .exr under /public. */
-  url = "/hdri/grasslands_sunset_4k.exr",
+  /** Path to the equirectangular .exr (remote CDN when configured, else /public/hdri). */
+  url = `${MODELS_BASE_URL}/grasslands_sunset_4k.exr`,
   /** Show the sky as the background too? Off by default (stay indoor). */
   showBackground = false,
 }: {

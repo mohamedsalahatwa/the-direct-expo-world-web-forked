@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 import { useGLTF } from "@react-three/drei";
 import { Box3, Vector3 } from "three";
+import { MODELS_BASE_URL } from "../assetBase";
 
 /**
  * Reusable loader for the GLB furniture/props.
@@ -98,19 +99,21 @@ export function GlbModel({
   );
 }
 
-// --- Asset URLs (served from /public) -------------------------------------
+// --- Asset URLs (remote CDN when configured, else /public/models) ----------
+// MODELS_BASE_URL is the shared asset base (see ../assetBase).
 export const GLB = {
-  receptionDesk: "/models/reception_desk_diarama_optimized.glb",
-  sofa: "/models/victorian_lounge_sofa_optimized.glb",
-  coffeeTable: "/models/living_room_tables_optimized.glb",
-  chair: "/models/gothic_chair_optimized.glb",
-  plant: "/models/house_plant_optimized.glb",
-  tvMain: "/models/sony_bravia_xr-77a80l_oled_tv_optimized.glb",
-  tvRoom: "/models/tv_lg_oled_8k_optimized.glb",
+  receptionDesk: `${MODELS_BASE_URL}/reception_desk_diarama_optimized.glb`,
+  sofa: `${MODELS_BASE_URL}/victorian_lounge_sofa_optimized.glb`,
+  coffeeTable: `${MODELS_BASE_URL}/living_room_tables_optimized.glb`,
+  chair: `${MODELS_BASE_URL}/gothic_chair_optimized.glb`,
+  plant: `${MODELS_BASE_URL}/house_plant_optimized.glb`,
+  tvMain: `${MODELS_BASE_URL}/sony_bravia_xr-77a80l_oled_tv_optimized.glb`,
+  tvRoom: `${MODELS_BASE_URL}/tv_lg_oled_8k_optimized.glb`,
 } as const;
 
-// NB: we deliberately do NOT eager-preload these heavy GLBs (~120 MB combined)
-// at import time — that would contend with the booth-critical PBR textures and
-// delay first interaction. The loading screen (see ui/LoadingScreen.tsx) waits
-// only on those essential textures; each GLB then streams in on mount inside its
-// own Suspense boundary, popping into the already-entered hall as it arrives.
+// We deliberately do NOT eager-preload these heavy GLBs (~120 MB combined) at
+// import time — local or remote, fetching them all at once contends with the
+// booth-critical PBR textures and delays first interaction. The loading screen
+// (see ui/LoadingScreen.tsx) waits only on those essential textures; each GLB
+// then streams in on mount inside its own Suspense boundary, popping into the
+// already-entered hall as it arrives.
