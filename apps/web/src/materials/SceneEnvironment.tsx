@@ -9,11 +9,11 @@ import {
   type Texture,
   type WebGLRenderTarget,
 } from "three";
-import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader.js";
+import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import { MODELS_BASE_URL } from "../assetBase";
 
 /**
- * Loads an HDRI/EXR sky, converts it with PMREMGenerator and uses it as the
+ * Loads an HDRI (.hdr / Radiance RGBE) sky, converts it with PMREMGenerator and uses it as the
  * scene's image-based lighting (`scene.environment`) for realistic PBR
  * reflections and soft ambient fill.
  *
@@ -27,7 +27,7 @@ import { MODELS_BASE_URL } from "../assetBase";
  * physically-based by default (no `useLegacyLights`), so lights already use
  * physical falloff.
  *
- * Memory: the source EXR DataTexture and the PMREM generator are temporary —
+ * Memory: the source HDR DataTexture and the PMREM generator are temporary —
  * both are disposed immediately after the env map is produced; only the small
  * pre-filtered cube-UV target is kept (and disposed on unmount).
  */
@@ -36,8 +36,8 @@ export function SceneEnvironment({
   intensity = 0.85,
   /** Tone-mapping exposure. */
   exposure = 1.0,
-  /** Path to the equirectangular .exr (remote CDN when configured, else /public/hdri). */
-  url = `${MODELS_BASE_URL}/grasslands_sunset_4k.exr`,
+  /** Path to the equirectangular .hdr (remote CDN when configured, else /public/models). */
+  url = `${MODELS_BASE_URL}/grasslands_sunset_1k.hdr`,
   /** Show the sky as the background too? Off by default (stay indoor). */
   showBackground = false,
 }: {
@@ -58,22 +58,22 @@ export function SceneEnvironment({
     gl.shadowMap.type = PCFSoftShadowMap;
   }, [gl, exposure]);
 
-  // Load + convert the EXR into an environment map.
+  // Load + convert the HDR into an environment map.
   useEffect(() => {
     let cancelled = false;
     let envMap: Texture | null = null;
     const prevBackground = scene.background;
 
-    new EXRLoader().load(url, (exr) => {
+    new RGBELoader().load(url, (hdr) => {
       if (cancelled) {
-        exr.dispose();
+        hdr.dispose();
         return;
       }
-      exr.mapping = EquirectangularReflectionMapping;
+      hdr.mapping = EquirectangularReflectionMapping;
 
       const pmrem = new PMREMGenerator(gl);
       pmrem.compileEquirectangularShader();
-      const target: WebGLRenderTarget = pmrem.fromEquirectangular(exr);
+      const target: WebGLRenderTarget = pmrem.fromEquirectangular(hdr);
       envMap = target.texture;
 
       scene.environment = envMap;
@@ -85,9 +85,9 @@ export function SceneEnvironment({
         scene.backgroundBlurriness = 0.4; // soften so it reads as ambient, not a sharp sky
       }
 
-      // Free the temporaries: the raw EXR (~tens of MB) and the generator's
+      // Free the temporaries: the raw HDR DataTexture and the generator's
       // working render targets are no longer needed once the env map exists.
-      exr.dispose();
+      hdr.dispose();
       pmrem.dispose();
     });
 
