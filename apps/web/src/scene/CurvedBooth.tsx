@@ -1,4 +1,4 @@
-import { Suspense, useRef, useState } from "react";
+import { memo, Suspense, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import { DoubleSide, type Group } from "three";
@@ -67,7 +67,7 @@ function RoomScreen({ accent }: { accent: string }) {
  * a cream C-wall, a wall-mounted property render, a low reception desk carrying
  * the developer name, a small lounge (table + chairs) and flanking greenery.
  */
-export function CurvedBooth({
+function CurvedBoothImpl({
   dev,
   active,
   onSelect,
@@ -89,9 +89,13 @@ export function CurvedBooth({
   const deskTopWood = usePbrMaterial("wood", { repeat: [2, 1], color: "#7a5836", roughness: 0.55 });
 
   useFrame(() => {
-    if (!liftRef.current) return;
+    const g = liftRef.current;
+    if (!g) return;
     const t = active ? 0.14 : hovered ? 0.06 : 0;
-    liftRef.current.position.y += (t - liftRef.current.position.y) * 0.15;
+    const dy = t - g.position.y;
+    // Settled: skip the write entirely so 30 idle booths cost ~nothing per frame.
+    if (Math.abs(dy) < 0.0005) return;
+    g.position.y += dy * 0.15;
   });
 
   return (
@@ -151,6 +155,9 @@ export function CurvedBooth({
           maxWidth={2}
           outlineWidth={0.006}
           outlineColor="#000"
+          // Skip the glyph mesh during pointer raycasts (it's inside the booth's
+          // interactive group); troika text raycasting is disproportionately costly.
+          raycast={() => null}
         >
           {dev.name}
         </Text>
@@ -167,3 +174,7 @@ export function CurvedBooth({
     </group>
   );
 }
+
+// Memoised: with a stable `onSelect` (see App's useCallback) and stable `dev`,
+// only the booth whose `active` flips re-renders on selection — not all 30.
+export const CurvedBooth = memo(CurvedBoothImpl);

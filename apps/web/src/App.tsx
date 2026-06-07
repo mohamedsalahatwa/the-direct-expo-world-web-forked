@@ -33,12 +33,26 @@ export function App() {
   const [ready, setReady] = useState(false);
   const markReady = useCallback(() => setReady(true), []);
 
-  const handleSelectDeveloper = (id: string) =>
-    setOpenDeveloper((current) => (current === id ? null : id));
+  // Stable identity so memoised <CurvedBooth>es don't all re-render on select.
+  const handleSelectDeveloper = useCallback(
+    (id: string) => setOpenDeveloper((current) => (current === id ? null : id)),
+    [],
+  );
 
   return (
     <div className="app">
-      <div className="canvas-wrap">
+      {/* Persistent, indexable description of the WebGL canvas (the canvas itself
+          is opaque to crawlers/AT). Mirrors the static copy in index.html. */}
+      <h1 className="sr-only">The Direct Expo — Immersive Virtual Exhibition</h1>
+      <p className="sr-only">
+        An interactive 3D exhibition hall. Switch between an overview and walking
+        the floor, open developer booths, and start a Google Meet.
+      </p>
+      <div
+        className="canvas-wrap"
+        role="application"
+        aria-label="Interactive 3D exhibition hall. Use the Overview and Walk the floor controls; click a booth to open its details."
+      >
         <Canvas
           shadows
           // Cap the pixel ratio: retina screens otherwise render at 2–3× the

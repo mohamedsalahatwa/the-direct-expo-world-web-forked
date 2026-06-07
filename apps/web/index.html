@@ -3,10 +3,46 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Immersive App</title>
+
+    <!-- Primary SEO -->
+    <title>The Direct Expo — Immersive Virtual Exhibition</title>
+    <meta
+      name="description"
+      content="Explore The Direct Expo: an immersive 3D virtual exhibition hall where you can walk the floor, visit developer booths, and connect over Google Meet — all in your browser."
+    />
+    <meta name="theme-color" content="#171209" />
+    <link rel="canonical" href="https://app.byitcorp.com/" />
+
+    <!-- Open Graph / social -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="The Direct Expo — Immersive Virtual Exhibition" />
+    <meta
+      property="og:description"
+      content="Walk an immersive 3D exhibition hall, explore developer booths, and connect over Google Meet — right in your browser."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
-    <div id="root"></div>
+    <!-- App mounts here. The visually-hidden heading + noscript give crawlers and
+         non-WebGL clients meaningful, indexable content describing the page. -->
+    <div id="root">
+      <h1 class="sr-only">The Direct Expo — Immersive Virtual Exhibition</h1>
+      <p class="sr-only">
+        An interactive 3D exhibition hall. Use the on-screen controls to switch
+        between an overview and walking the floor, open developer booths, and
+        start a Google Meet. Loading the immersive experience…
+      </p>
+    </div>
+    <noscript>
+      <div style="max-width: 40rem; margin: 4rem auto; font-family: system-ui; line-height: 1.6">
+        <h1>The Direct Expo — Immersive Virtual Exhibition</h1>
+        <p>
+          This is an immersive 3D exhibition experience that requires JavaScript
+          and a WebGL-capable browser. Please enable JavaScript to walk the
+          exhibition floor, explore developer booths, and connect over Google Meet.
+        </p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

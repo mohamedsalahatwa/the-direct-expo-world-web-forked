@@ -17,6 +17,11 @@ import { MODELS_BASE_URL } from "../assetBase";
  * so many instances — e.g. the 30 room TVs — stay cheap on GPU memory).
  */
 
+// A no-op raycast: assigned to GLB meshes so they're skipped during pointer
+// hit-testing (they're decorative, never interactive). three calls raycast with
+// (raycaster, intersects[]); doing nothing means "never hit".
+const NO_RAYCAST = () => {};
+
 export type FitAxis = "x" | "y" | "z" | "max";
 
 export interface GlbModelProps {
@@ -59,11 +64,22 @@ export function GlbModel({
     clone.rotation.set(modelRotation[0], modelRotation[1], modelRotation[2]);
     clone.updateMatrixWorld(true);
     clone.traverse((o) => {
-      const mesh = o as { isMesh?: boolean; castShadow?: boolean; receiveShadow?: boolean; frustumCulled?: boolean };
+      const mesh = o as {
+        isMesh?: boolean;
+        castShadow?: boolean;
+        receiveShadow?: boolean;
+        frustumCulled?: boolean;
+        raycast?: unknown;
+      };
       if (mesh.isMesh) {
         mesh.castShadow = castShadow;
         mesh.receiveShadow = receiveShadow;
         mesh.frustumCulled = true;
+        // GLB furniture/props are never click targets. Disabling their raycast
+        // removes thousands of triangles from every pointer event — critical
+        // because these models are nested inside the booths' interactive groups,
+        // so R3F would otherwise raycast them on every mouse move. Biggest INP win.
+        mesh.raycast = NO_RAYCAST;
       }
     });
 
