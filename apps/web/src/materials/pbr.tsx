@@ -11,6 +11,7 @@ import {
   type Side,
   type Texture,
 } from "three";
+import logoUrl from "../assets/images/TDE_header.png";
 
 /**
  * PBR material library for the exhibition.
@@ -184,4 +185,18 @@ export function usePbrMaterial(kind: PbrKind, options?: PbrOptions): MeshStandar
   const lib = useContext(PbrContext);
   if (!lib) throw new Error("usePbrMaterial must be used within <PbrProvider>");
   return lib.getMaterial(kind, options);
+}
+
+/**
+ * Eagerly warm drei's loader cache with the *essential* startup textures (the
+ * 15 PBR maps + the signage logo) before the Canvas mounts and the WebGL
+ * context is built, so the network fetch overlaps context creation and the hall
+ * paints sooner. Safe to call once at boot — PbrProvider/useTexture reuse these
+ * cached results instead of re-fetching.
+ *
+ * Heavy GLB furniture is intentionally excluded: it streams in lazily after
+ * entry (see GlbModel.tsx) so it never delays first interaction.
+ */
+export function preloadEssentialTextures() {
+  useTexture.preload([...Object.values(URL_MAP), logoUrl]);
 }

@@ -109,6 +109,8 @@ export const GLB = {
   tvRoom: "/models/tv_lg_oled_8k_optimized.glb",
 } as const;
 
-// NB: we deliberately do NOT eager-preload these heavy GLBs at import time —
-// that would contend with the booth-critical PBR textures and delay first
-// interaction. Each model loads on mount inside its own Suspense boundary.
+// NB: we deliberately do NOT eager-preload these heavy GLBs (~120 MB combined)
+// at import time — that would contend with the booth-critical PBR textures and
+// delay first interaction. The loading screen (see ui/LoadingScreen.tsx) waits
+// only on those essential textures; each GLB then streams in on mount inside its
+// own Suspense boundary, popping into the already-entered hall as it arrives.
