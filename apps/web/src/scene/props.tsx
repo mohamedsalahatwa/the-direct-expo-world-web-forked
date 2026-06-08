@@ -1,6 +1,6 @@
-import { Suspense, useMemo } from "react";
+import { useMemo } from "react";
 import { usePbrMaterial } from "../materials/pbr";
-import { GlbModel, GLB } from "./GlbModel";
+import { PlantModel } from "./instancedAssets";
 
 // Shared palette for the "built" furniture so booths feel cohesive.
 const CREAM = "#efe7d8";
@@ -11,7 +11,9 @@ const WOOD = "#6f4f32";
 // keep their proportions.
 const PLANT_BASE_HEIGHT = 1.5;
 
-/** A potted house plant (GLB), auto-fitted and sat on the floor. */
+/** A potted house plant — instanced (see instancedAssets). Auto-fitted and sat
+ *  on the floor; never casts the directional shadow (ContactShadows grounds it).
+ *  Must be rendered inside <PlantModel.Provider> (Scene.tsx wraps the floor). */
 export function Plant({
   position = [0, 0, 0],
   scale = 1,
@@ -19,19 +21,7 @@ export function Plant({
   position?: [number, number, number];
   scale?: number;
 }) {
-  return (
-    <Suspense fallback={null}>
-      <GlbModel
-        url={GLB.plant}
-        position={position}
-        fit={{ axis: "y", size: PLANT_BASE_HEIGHT * scale }}
-        // Decorative foliage repeated ~85× across the floor: keep it out of the
-        // directional shadow pass (ContactShadows still grounds it). This is the
-        // single biggest shadow-pass saving on the scene.
-        castShadow={false}
-      />
-    </Suspense>
-  );
+  return <PlantModel.Placement position={position} fit={{ axis: "y", size: PLANT_BASE_HEIGHT * scale }} />;
 }
 
 /** A simple low-poly visitor: capsule body + sphere head, brand-tinted. */

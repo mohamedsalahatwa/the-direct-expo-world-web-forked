@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { useTexture } from "@react-three/drei";
 import { GlbModel, GLB } from "./GlbModel";
+import { PlantModel } from "./instancedAssets";
 import logoUrl from "../assets/images/TDE_header.png";
 
 /**
@@ -48,8 +49,8 @@ export function LoungeGroup({
         {/* two chairs flanking, angled toward the table */}
         <GlbModel url={GLB.chair} position={[-1.7, 0, 0.6]} rotationY={Math.PI / 2.4} fit={{ axis: "y", size: 1.4 }} />
         <GlbModel url={GLB.chair} position={[1.7, 0, 0.6]} rotationY={-Math.PI / 2.4} fit={{ axis: "y", size: 1.4 }} />
-        {/* plant accent at the back corner */}
-        <GlbModel url={GLB.plant} position={[1.9, 0, -1.5]} fit={{ axis: "y", size: 1.7 }} castShadow={false} />
+        {/* plant accent at the back corner (instanced) */}
+        <PlantModel.Placement position={[1.9, 0, -1.5]} fit={{ axis: "y", size: 1.7 }} />
       </Suspense>
     </group>
   );
@@ -67,11 +68,11 @@ export function GalleryPlants() {
     { pos: [0, 0, -22], size: 2.0 }, // far avenue end
   ];
   return (
-    <Suspense fallback={null}>
+    <>
       {spots.map((s, i) => (
-        <GlbModel key={i} url={GLB.plant} position={s.pos} fit={{ axis: "y", size: s.size }} castShadow={false} />
+        <PlantModel.Placement key={i} position={s.pos} fit={{ axis: "y", size: s.size }} />
       ))}
-    </Suspense>
+    </>
   );
 }
 

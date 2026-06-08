@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, ContactShadows, useTexture, Text } from "@react-three/drei";
 import { Physics } from "@react-three/rapier";
@@ -29,6 +29,7 @@ import {
 } from "./layout";
 import { PbrProvider, usePbrMaterial } from "../materials/pbr";
 import { SceneEnvironment } from "../materials/SceneEnvironment";
+import { PlantModel, TvRoomModel } from "./instancedAssets";
 import logoUrl from "../assets/images/TDE_header.png";
 
 /**
@@ -196,50 +197,61 @@ export function Scene({
         <PlayerController enabled={walking} />
       </Physics>
 
-      {/* 30 developer booths on a spaced grid; two blocks face the avenue */}
-      {BOOTHS.map(({ dev, position, rotationY }) => (
-        <group key={dev.id} position={position} rotation={[0, rotationY, 0]}>
-          <CurvedBooth
-            dev={dev}
-            active={activeDeveloper === dev.id}
-            onSelect={onSelectDeveloper}
-          />
-        </group>
-      ))}
+      {/* Everything below is populated content that places the instanced plant
+          and room-TV models, so it lives inside their <Provider>s. Wrapped in a
+          Suspense (fallback={null}) so the hall structure + lighting above appear
+          immediately; the booths/furniture pop in together once the two shared
+          GLBs finish loading. */}
+      <Suspense fallback={null}>
+        <PlantModel.Provider>
+          <TvRoomModel.Provider>
+            {/* 30 developer booths on a spaced grid; two blocks face the avenue */}
+            {BOOTHS.map(({ dev, position, rotationY }) => (
+              <group key={dev.id} position={position} rotation={[0, rotationY, 0]}>
+                <CurvedBooth
+                  dev={dev}
+                  active={activeDeveloper === dev.id}
+                  onSelect={onSelectDeveloper}
+                />
+              </group>
+            ))}
 
-      {/* central hero attraction (centre of the avenue) */}
-      <FeaturePlaza position={FEATURE_PLAZA.position} />
+            {/* central hero attraction (centre of the avenue) */}
+            <FeaturePlaza position={FEATURE_PLAZA.position} />
 
-      {/* branded entrance + front reception amenities */}
-      <EntrancePortal position={ENTRANCE_PORTAL.position} />
-      <VipLounge position={VIP_LOUNGE.position} rotationY={VIP_LOUNGE.rotationY} />
+            {/* branded entrance + front reception amenities */}
+            <EntrancePortal position={ENTRANCE_PORTAL.position} />
+            <VipLounge position={VIP_LOUNGE.position} rotationY={VIP_LOUNGE.rotationY} />
 
-      {/* GLB furniture: reception near the entrance, waiting lounges flanking it,
-          plants around reception + corners, and the hero video wall. */}
-      <ReceptionArea />
-      <LoungeGroup position={[-17, 0, 19]} rotationY={0} />
-      <LoungeGroup position={[17, 0, 19]} rotationY={0} />
-      <GalleryPlants />
-      <MainScreen />
+            {/* GLB furniture: reception near the entrance, waiting lounges flanking
+                it, plants around reception + corners, and the hero video wall. */}
+            <ReceptionArea />
+            <LoungeGroup position={[-17, 0, 19]} rotationY={0} />
+            <LoungeGroup position={[17, 0, 19]} rotationY={0} />
+            <GalleryPlants />
+            <MainScreen />
 
-      {/* lounges down the central avenue + coffee corners in the aisle gaps */}
-      {NETWORKING_LOUNGES.map((l, i) => (
-        <NetworkingLounge key={`net${i}`} position={l.position} rotationY={l.rotationY} />
-      ))}
-      {COFFEE_CORNERS.map((c, i) => (
-        <CoffeeCorner key={`cof${i}`} position={c.position} />
-      ))}
+            {/* lounges down the central avenue + coffee corners in the aisle gaps */}
+            {NETWORKING_LOUNGES.map((l, i) => (
+              <NetworkingLounge key={`net${i}`} position={l.position} rotationY={l.rotationY} />
+            ))}
+            {COFFEE_CORNERS.map((c, i) => (
+              <CoffeeCorner key={`cof${i}`} position={c.position} />
+            ))}
 
-      {/* landscaping at clear aisle cross-points */}
-      {PLANTS.map((p, i) => (
-        <Plant key={`plant${i}`} position={p.position} scale={1.3} />
-      ))}
+            {/* landscaping at clear aisle cross-points */}
+            {PLANTS.map((p, i) => (
+              <Plant key={`plant${i}`} position={p.position} scale={1.3} />
+            ))}
 
-      {/* visitors along the open avenue + front concourse (clear of booths) */}
-      <Crowd around={[0, 0, 6]} count={5} spread={2.6} color="#46506b" />
-      <Crowd around={[0, 0, -12]} count={4} spread={2.6} color="#5a4636" />
-      <Crowd around={[0, 0, 19]} count={4} spread={2.8} color="#3f4a5e" />
-      <Crowd around={[3, 0, 20]} count={3} spread={1.8} color="#534434" />
+            {/* visitors along the open avenue + front concourse (clear of booths) */}
+            <Crowd around={[0, 0, 6]} count={5} spread={2.6} color="#46506b" />
+            <Crowd around={[0, 0, -12]} count={4} spread={2.6} color="#5a4636" />
+            <Crowd around={[0, 0, 19]} count={4} spread={2.8} color="#3f4a5e" />
+            <Crowd around={[3, 0, 20]} count={3} spread={1.8} color="#534434" />
+          </TvRoomModel.Provider>
+        </PlantModel.Provider>
+      </Suspense>
 
       <ContactShadows position={[0, 0.02, 1]} opacity={0.4} scale={56} blur={2.6} far={10} resolution={512} />
 

@@ -5,6 +5,7 @@ import { Scene } from "./scene/Scene";
 import type { ViewMode } from "./scene/Scene";
 import { BoothPanel } from "./ui/BoothPanel";
 import { LoadingScreen } from "./ui/LoadingScreen";
+import { PerfHud, PerfProbe } from "./ui/PerfHud";
 
 // emulate: false → don't inject the dev XR button or pull the emulator bundle.
 // On an XR-capable device/browser (Railway is HTTPS) the "Enter VR" button
@@ -63,6 +64,7 @@ export function App() {
           gl={{ preserveDrawingBuffer: true, powerPreference: "high-performance" }}
         >
           <XR store={xrStore}>
+            <PerfProbe />
             {/* This boundary awaits only the essential assets (PBR textures +
                 logo). When it resolves, SceneReadySignal fires and the loading
                 screen fades; heavy GLBs keep streaming into their own inner
@@ -111,6 +113,9 @@ export function App() {
 
       {/* Full-screen entry overlay; fades out the moment essential assets load. */}
       <LoadingScreen ready={ready} />
+
+      {/* Perf HUD (draw calls / triangles / FPS / frame ms) — only with ?perf */}
+      <PerfHud />
     </div>
   );
 }

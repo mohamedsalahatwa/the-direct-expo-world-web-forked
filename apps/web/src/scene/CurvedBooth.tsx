@@ -1,11 +1,11 @@
-import { memo, Suspense, useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import { DoubleSide, type Group } from "three";
 import type { Developer } from "./developers";
 import { Plant, Armchair, RoundTable } from "./props";
 import { usePbrMaterial } from "../materials/pbr";
-import { GlbModel, GLB } from "./GlbModel";
+import { TvRoomModel } from "./instancedAssets";
 import { RoomSign } from "./RoomSign";
 
 const CREAM = "#efe7d8";
@@ -13,53 +13,23 @@ const R = 1.95; // curved-wall radius
 const H = 2.6; // wall height
 const GAP = 1.35; // front opening angle (radians), centred on +Z
 
-/** A glowing "property render" screen: dark sky + a little brand-tinted skyline. */
-function RenderScreen({ accent }: { accent: string }) {
-  // Metal bezel around the display panel.
-  const bezel = usePbrMaterial("metal", { repeat: [1, 1], color: "#2b2722", roughness: 0.5, envMapIntensity: 1 });
-  return (
-    <group position={[0, 1.55, -R + 0.14]}>
-      <mesh castShadow material={bezel}>
-        <boxGeometry args={[1.6, 1.0, 0.06]} />
-      </mesh>
-      <mesh position={[0, 0, 0.04]}>
-        <planeGeometry args={[1.46, 0.86]} />
-        <meshStandardMaterial color="#1d3a52" emissive="#1d3a52" emissiveIntensity={0.25} />
-      </mesh>
-      {/* skyline */}
-      {[-0.5, -0.18, 0.16, 0.48].map((x, i) => {
-        const h = [0.4, 0.62, 0.34, 0.5][i];
-        return (
-          <mesh key={i} position={[x, -0.43 + h / 2, 0.05]}>
-            <boxGeometry args={[0.18, h, 0.01]} />
-            <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.45} toneMapped={false} />
-          </mesh>
-        );
-      })}
-    </group>
-  );
-}
-
 /**
- * The room's display: a real wall-facing TV (GLB) standing against the booth's
- * back wall at eye level, facing the opening (+Z). The promo panel is emissive
- * so the screen reads as "on". While the GLB streams in, the lightweight
- * {@link RenderScreen} is shown as the Suspense fallback so there's always a
- * screen on the wall.
+ * The room's display: a real wall-facing TV against the booth's back wall at eye
+ * level, facing the opening (+Z), rendered as a shared InstancedMesh (see
+ * instancedAssets / TvRoomModel) so all 30 booths cost a handful of draw calls.
+ * The promo panel is emissive so the screen reads as "on".
  */
 function RoomScreen({ accent }: { accent: string }) {
   return (
-    <Suspense fallback={<RenderScreen accent={accent} />}>
-      <group position={[0, 0, -R + 0.15]}>
-        {/* OLED on a stand against the back wall, facing the visitor */}
-        <GlbModel url={GLB.tvRoom} position={[0, 0, 0]} rotationY={0} fit={{ axis: "y", size: 1.5 }} />
-        {/* emissive brand content on the screen face */}
-        <mesh position={[0, 0.95, 0.18]}>
-          <planeGeometry args={[1.18, 0.66]} />
-          <meshStandardMaterial color="#16314a" emissive={accent} emissiveIntensity={0.6} toneMapped={false} />
-        </mesh>
-      </group>
-    </Suspense>
+    <group position={[0, 0, -R + 0.15]}>
+      {/* OLED on a stand against the back wall, facing the visitor (instanced) */}
+      <TvRoomModel.Placement position={[0, 0, 0]} rotationY={0} fit={{ axis: "y", size: 1.5 }} />
+      {/* emissive brand content on the screen face */}
+      <mesh position={[0, 0.95, 0.18]}>
+        <planeGeometry args={[1.18, 0.66]} />
+        <meshStandardMaterial color="#16314a" emissive={accent} emissiveIntensity={0.6} toneMapped={false} />
+      </mesh>
+    </group>
   );
 }
 

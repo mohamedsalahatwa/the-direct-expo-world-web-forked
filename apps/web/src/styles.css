@@ -39,6 +39,25 @@ body,
   min-width: 0;
 }
 
+/* Perf HUD (enabled with ?perf) — fixed monospace readout, top-left. */
+.perf-hud {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 1000;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(8, 12, 22, 0.78);
+  color: #9effa6;
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.perf-hud b {
+  color: #fff;
+  font-weight: 600;
+}
+
 /* Branded header banner across the top of the floor view */
 .expo-header {
   position: absolute;
