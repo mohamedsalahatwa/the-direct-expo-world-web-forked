@@ -368,40 +368,43 @@ button[type="submit"]:disabled {
 
 .booth-panel {
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 28%;
-  min-width: 340px;
-  max-width: 460px;
+  top: 50%;
+  right: 28px;
+  width: 360px;
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 140px);
   z-index: 8;
   display: flex;
   flex-direction: column;
   color: #f3ece0;
-  background: linear-gradient(160deg, rgba(20, 15, 8, 0.82) 0%, rgba(11, 9, 5, 0.9) 100%);
+  background: linear-gradient(160deg, rgba(20, 15, 8, 0.86) 0%, rgba(11, 9, 5, 0.94) 100%);
   backdrop-filter: blur(20px) saturate(125%);
   -webkit-backdrop-filter: blur(20px) saturate(125%);
-  border-left: 1px solid rgba(200, 162, 75, 0.35);
-  box-shadow: -26px 0 64px rgba(0, 0, 0, 0.5);
-  /* Hidden off-canvas; the scene stays fully visible & interactive. */
-  transform: translateX(110%);
-  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  border: 1px solid rgba(200, 162, 75, 0.35);
+  border-radius: 20px;
+  box-shadow: 0 26px 64px rgba(0, 0, 0, 0.55);
+  /* Hidden off-canvas to the right; the scene stays fully visible & interactive. */
+  transform: translate(120%, -50%);
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease;
+  opacity: 0;
   pointer-events: none;
 }
 .booth-panel.is-open {
-  transform: translateX(0);
+  transform: translate(0, -50%);
+  opacity: 1;
   pointer-events: auto;
 }
-/* gold hairline along the leading edge */
+/* accent hairline along the leading edge, tinted to the room colour */
 .booth-panel::before {
   content: "";
   position: absolute;
-  top: 0;
+  top: 16px;
+  bottom: 16px;
   left: 0;
-  width: 2px;
-  height: 100%;
-  background: linear-gradient(180deg, transparent, #c8a24b 30%, #e7c882 50%, #c8a24b 70%, transparent);
-  opacity: 0.8;
+  width: 3px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, transparent, var(--accent, #c8a24b) 28%, #e7c882 50%, var(--accent, #c8a24b) 72%, transparent);
+  opacity: 0.85;
 }
 
 .bp-close {
@@ -424,19 +427,101 @@ button[type="submit"]:disabled {
   transform: rotate(90deg);
 }
 
-.bp-scroll {
-  height: 100%;
+.bp-card {
   overflow-y: auto;
-  padding: 32px 26px 36px;
+  padding: 30px 26px 26px;
   scrollbar-width: thin;
   scrollbar-color: rgba(200, 162, 75, 0.4) transparent;
 }
-.bp-scroll::-webkit-scrollbar {
+.bp-card::-webkit-scrollbar {
   width: 8px;
 }
-.bp-scroll::-webkit-scrollbar-thumb {
+.bp-card::-webkit-scrollbar-thumb {
   background: rgba(200, 162, 75, 0.35);
   border-radius: 4px;
+}
+
+/* booth number under the developer name */
+.bp-booth {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--accent, #c8a24b);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+
+/* clickable video-meeting row */
+.bp-video {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 6px 0 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(200, 162, 75, 0.28);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f3ece0;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+.bp-video:hover:not(:disabled) {
+  background: rgba(200, 162, 75, 0.12);
+  border-color: rgba(200, 162, 75, 0.5);
+  transform: translateY(-1px);
+}
+.bp-video:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.bp-video > svg {
+  flex: 0 0 auto;
+  color: var(--accent, #c8a24b);
+}
+.bp-video-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.bp-video-text strong {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.bp-video-text span {
+  font-size: 0.76rem;
+  color: #cbb489;
+}
+.bp-video-go {
+  flex: 0 0 auto;
+  font-size: 1.15rem;
+  color: var(--accent, #c8a24b);
+}
+
+/* primary join-meeting button */
+.bp-join {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #1a1206;
+  background: linear-gradient(135deg, #f0d79b, #c8a24b);
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(200, 162, 75, 0.3);
+  transition: transform 0.15s, filter 0.2s;
+}
+.bp-join:hover:not(:disabled) {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+.bp-join:disabled {
+  opacity: 0.7;
+  cursor: default;
 }
 
 .bp-head {
@@ -711,9 +796,13 @@ button[type="submit"]:disabled {
 
 @media (max-width: 760px) {
   .booth-panel {
-    width: 100%;
-    min-width: 0;
-    max-width: none;
+    right: 50%;
+    width: calc(100vw - 32px);
+    max-width: 420px;
+    transform: translate(calc(50% + 120vw), -50%);
+  }
+  .booth-panel.is-open {
+    transform: translate(50%, -50%);
   }
 }
 

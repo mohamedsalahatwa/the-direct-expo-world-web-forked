@@ -13,24 +13,11 @@ import logoUrl from "../assets/images/TDE_header.png";
  * see the layout notes in Scene.tsx.
  */
 
-/* ----------------------------- Reception ------------------------------- */
-
-/** Furnished reception vignette near the entrance (front-left lobby). */
-export function ReceptionArea() {
-  return (
-    <Suspense fallback={null}>
-      {/* faces +Z toward the incoming visitor */}
-      <GlbModel url={GLB.receptionDesk} position={[-9, 0, 16]} rotationY={0} fit={{ axis: "max", size: 4.2 }} />
-    </Suspense>
-  );
-}
-
 /* --------------------------- Lounge group ------------------------------ */
 
 /**
- * A comfortable waiting/lounge cluster: a sofa, two chairs and a centred coffee
- * table, with a plant accent. Built around a local origin and dropped at
- * `position` with an overall `rotationY`.
+ * A waiting/lounge accent: a plant marking the lounge spot. Built around a local
+ * origin and dropped at `position` with an overall `rotationY`.
  */
 export function LoungeGroup({
   position,
@@ -41,17 +28,8 @@ export function LoungeGroup({
 }) {
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      <Suspense fallback={null}>
-        {/* coffee table centred between the seating */}
-        <GlbModel url={GLB.coffeeTable} position={[0, 0, 0]} fit={{ axis: "max", size: 1.5 }} />
-        {/* sofa behind the table, facing it (+Z) */}
-        <GlbModel url={GLB.sofa} position={[0, 0, -1.7]} rotationY={Math.PI / 2} fit={{ axis: "max", size: 2.2 }} />
-        {/* two chairs flanking, angled toward the table */}
-        <GlbModel url={GLB.chair} position={[-1.7, 0, 0.6]} rotationY={Math.PI / 2.4} fit={{ axis: "y", size: 1.4 }} />
-        <GlbModel url={GLB.chair} position={[1.7, 0, 0.6]} rotationY={-Math.PI / 2.4} fit={{ axis: "y", size: 1.4 }} />
-        {/* plant accent at the back corner (instanced) */}
-        <PlantModel.Placement position={[1.9, 0, -1.5]} fit={{ axis: "y", size: 1.7 }} />
-      </Suspense>
+      {/* plant accent at the back corner (instanced) */}
+      <PlantModel.Placement position={[1.9, 0, -1.5]} fit={{ axis: "y", size: 1.7 }} />
     </group>
   );
 }

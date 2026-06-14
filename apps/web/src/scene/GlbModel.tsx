@@ -118,13 +118,8 @@ export function GlbModel({
 // --- Asset URLs (remote CDN when configured, else /public/models) ----------
 // MODELS_BASE_URL is the shared asset base (see ../assetBase).
 export const GLB = {
-  receptionDesk: `${MODELS_BASE_URL}/reception_desk_diarama_optimized.glb`,
-  sofa: `${MODELS_BASE_URL}/victorian_lounge_sofa_optimized.glb`,
-  coffeeTable: `${MODELS_BASE_URL}/living_room_tables_optimized.glb`,
-  chair: `${MODELS_BASE_URL}/gothic_chair_optimized.glb`,
   plant: `${MODELS_BASE_URL}/house_plant_optimized.glb`,
   tvMain: `${MODELS_BASE_URL}/sony_bravia_xr-77a80l_oled_tv_optimized.glb`,
-  tvRoom: `${MODELS_BASE_URL}/tv_lg_oled_8k_optimized.glb`,
 } as const;
 
 // We deliberately do NOT eager-preload these heavy GLBs (~120 MB combined) at

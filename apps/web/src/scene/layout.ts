@@ -28,8 +28,8 @@ export const BOOTH_DESK_Z = 1.35; // reception desk forward offset
 // Booths sit on a regular 3-column × 5-row grid on each side of an open
 // central avenue (which carries the hero plaza + entrance). Every booth is at
 // least BOOTH_PITCH apart — comfortably more than a booth's ~2.5 m footprint —
-// so no walls or props ever touch or intersect. Left-block booths open toward
-// +X and right-block toward −X, so all fronts face the avenue.
+// so no walls or props ever touch or intersect. All booths share the right
+// block's orientation (openings face −X), so every booth is identical.
 export const BOOTH_FOOTPRINT = 2.5; // keep-out radius of one booth (wall + pad + front props)
 const BOOTH_PITCH = 7; // centre-to-centre spacing (≈2 m clear between booths)
 const COLS_LEFT = [-7.5, -14.5, -21.5];
@@ -53,8 +53,10 @@ export const BOOTHS: BoothPlacement[] = (() => {
       }
     }
   };
-  block(COLS_LEFT, Math.PI / 2); // openings face +X (toward the avenue)
-  block(COLS_RIGHT, -Math.PI / 2); // openings face −X (toward the avenue)
+  // Both blocks use the same rotation as the right block, so all 30 booths are
+  // oriented identically (no mirroring between sides).
+  block(COLS_LEFT, -Math.PI / 2);
+  block(COLS_RIGHT, -Math.PI / 2);
   return out;
 })();
 

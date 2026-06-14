@@ -12,7 +12,7 @@ import {
   NetworkingLounge,
   CoffeeCorner,
 } from "./Amenities";
-import { ReceptionArea, LoungeGroup, GalleryPlants, MainScreen } from "./Furniture";
+import { LoungeGroup, GalleryPlants, MainScreen } from "./Furniture";
 import { Plant, Crowd } from "./props";
 import {
   BOOTHS,
@@ -28,8 +28,7 @@ import {
   PLANTS,
 } from "./layout";
 import { PbrProvider, usePbrMaterial } from "../materials/pbr";
-import { SceneEnvironment } from "../materials/SceneEnvironment";
-import { PlantModel, TvRoomModel } from "./instancedAssets";
+import { PlantModel } from "./instancedAssets";
 import logoUrl from "../assets/images/TDE_header.png";
 
 /**
@@ -151,18 +150,12 @@ export function Scene({
       <color attach="background" args={["#171209"]} />
       <fog attach="fog" args={["#171209", 50, 90]} />
 
-      {/* Studio HDRI → neutral ambient fill + realistic reflections. It carries
-          most of the soft ambient, so the explicit fill lights below stay low.
-          Sky stays hidden so the gallery reads as an indoor space. */}
-      {/* TEMPORARILY DISABLED — checking something. Re-enable when done. */}
-      <SceneEnvironment intensity={0.85} />
-
       {/* Freeze the shadow map in overview; keep it live while walking. */}
       <ShadowController walking={walking} />
 
-      {/* Gentle ambient/sky fill — kept low since the HDRI provides most of it. */}
-      <ambientLight intensity={0.18} />
-      <hemisphereLight args={["#fff6ec", "#34291c", 0.28]} />
+      {/* Ambient/sky fill — carries the soft ambient now that there's no HDRI IBL. */}
+      <ambientLight intensity={0.45} />
+      <hemisphereLight args={["#fff6ec", "#34291c", 0.6]} />
 
       {/* Soft, near-white key light for gallery-style modelling + crisp shadows.
           A larger map + blur radius gives soft, realistic contact shadows. */}
@@ -204,12 +197,12 @@ export function Scene({
           GLBs finish loading. */}
       <Suspense fallback={null}>
         <PlantModel.Provider>
-          <TvRoomModel.Provider>
             {/* 30 developer booths on a spaced grid; two blocks face the avenue */}
-            {BOOTHS.map(({ dev, position, rotationY }) => (
+            {BOOTHS.map(({ dev, position, rotationY }, i) => (
               <group key={dev.id} position={position} rotation={[0, rotationY, 0]}>
                 <CurvedBooth
                   dev={dev}
+                  boothNumber={i + 1}
                   active={activeDeveloper === dev.id}
                   onSelect={onSelectDeveloper}
                 />
@@ -223,9 +216,8 @@ export function Scene({
             <EntrancePortal position={ENTRANCE_PORTAL.position} />
             <VipLounge position={VIP_LOUNGE.position} rotationY={VIP_LOUNGE.rotationY} />
 
-            {/* GLB furniture: reception near the entrance, waiting lounges flanking
-                it, plants around reception + corners, and the hero video wall. */}
-            <ReceptionArea />
+            {/* GLB furniture: waiting lounge plant accents flanking the entrance,
+                plants around reception + corners, and the hero video wall. */}
             <LoungeGroup position={[-17, 0, 19]} rotationY={0} />
             <LoungeGroup position={[17, 0, 19]} rotationY={0} />
             <GalleryPlants />
@@ -249,7 +241,6 @@ export function Scene({
             <Crowd around={[0, 0, -12]} count={4} spread={2.6} color="#5a4636" />
             <Crowd around={[0, 0, 19]} count={4} spread={2.8} color="#3f4a5e" />
             <Crowd around={[3, 0, 20]} count={3} spread={1.8} color="#534434" />
-          </TvRoomModel.Provider>
         </PlantModel.Provider>
       </Suspense>
 

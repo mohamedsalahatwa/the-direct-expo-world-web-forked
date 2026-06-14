@@ -5,7 +5,6 @@ import { DoubleSide, type Group } from "three";
 import type { Developer } from "./developers";
 import { Plant, Armchair, RoundTable } from "./props";
 import { usePbrMaterial } from "../materials/pbr";
-import { TvRoomModel } from "./instancedAssets";
 import { RoomSign } from "./RoomSign";
 
 const CREAM = "#efe7d8";
@@ -14,40 +13,24 @@ const H = 2.6; // wall height
 const GAP = 1.35; // front opening angle (radians), centred on +Z
 
 /**
- * The room's display: a real wall-facing TV against the booth's back wall at eye
- * level, facing the opening (+Z), rendered as a shared InstancedMesh (see
- * instancedAssets / TvRoomModel) so all 30 booths cost a handful of draw calls.
- * The promo panel is emissive so the screen reads as "on".
- */
-function RoomScreen({ accent }: { accent: string }) {
-  return (
-    <group position={[0, 0, -R + 0.15]}>
-      {/* OLED on a stand against the back wall, facing the visitor (instanced) */}
-      <TvRoomModel.Placement position={[0, 0, 0]} rotationY={0} fit={{ axis: "y", size: 1.5 }} />
-      {/* emissive brand content on the screen face */}
-      <mesh position={[0, 0.95, 0.18]}>
-        <planeGeometry args={[1.18, 0.66]} />
-        <meshStandardMaterial color="#16314a" emissive={accent} emissiveIntensity={0.6} toneMapped={false} />
-      </mesh>
-    </group>
-  );
-}
-
-/**
  * One curved, contemporary developer booth opening toward the visitor (+Z):
  * a cream C-wall, a wall-mounted property render, a low reception desk carrying
  * the developer name, a small lounge (table + chairs) and flanking greenery.
  */
 function CurvedBoothImpl({
   dev,
+  boothNumber,
   active,
   onSelect,
 }: {
   dev: Developer;
+  boothNumber: number;
   active: boolean;
   onSelect: (id: string) => void;
 }) {
+  const boothLabel = String(boothNumber);
   const liftRef = useRef<Group>(null);
+  const numberRef = useRef<Group>(null);
   const [hovered, setHovered] = useState(false);
   const highlight = active || hovered;
 
@@ -59,12 +42,20 @@ function CurvedBoothImpl({
   const deskWood = usePbrMaterial("wood", { repeat: [2, 1], color: CREAM });
   const deskTopWood = usePbrMaterial("wood", { repeat: [2, 1], color: "#7a5836", roughness: 0.55 });
 
-  useFrame(() => {
+  useFrame((state) => {
+    // Floating booth number: bob up/down + spin a full 360° about Y.
+    const n = numberRef.current;
+    if (n) {
+      const now = state.clock.elapsedTime;
+      n.position.y = 1.45 + Math.sin(now * 0.9) * 0.14;
+      n.rotation.y = now * 0.6;
+    }
+
     const g = liftRef.current;
     if (!g) return;
     const t = active ? 0.14 : hovered ? 0.06 : 0;
     const dy = t - g.position.y;
-    // Settled: skip the write entirely so 30 idle booths cost ~nothing per frame.
+    // Settled: skip the lift write so 30 idle booths cost ~nothing per frame.
     if (Math.abs(dy) < 0.0005) return;
     g.position.y += dy * 0.15;
   });
@@ -80,6 +71,34 @@ function CurvedBoothImpl({
         <ringGeometry args={[2.15, 2.4, 48]} />
         <meshStandardMaterial color={dev.color} emissive={dev.color} emissiveIntensity={active ? 1 : 0.5} toneMapped={false} />
       </mesh>
+
+      {/* floating booth number at the centre of the room: bobs up/down + spins
+          360°. Double-sided (front + back) so it reads from every angle. */}
+      <group ref={numberRef} position={[0, 1.45, 0]}>
+        <Text
+          fontSize={0.5}
+          color={dev.color}
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={0.01}
+          outlineColor="#000"
+          raycast={() => null}
+        >
+          {boothLabel}
+        </Text>
+        {/* <Text
+          rotation={[0, Math.PI, 0]}
+          fontSize={0.5}
+          color={dev.color}
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={0.01}
+          outlineColor="#000"
+          raycast={() => null}
+        >
+          {boothLabel}
+        </Text> */}
+      </group>
 
       <group
         ref={liftRef}
@@ -106,9 +125,6 @@ function CurvedBoothImpl({
         <mesh position={[0, H / 2, 0]} castShadow receiveShadow material={wallOsb}>
           <cylinderGeometry args={[R, R, H, 48, 1, true, Math.PI / 2 + GAP / 2, Math.PI * 2 - GAP]} />
         </mesh>
-
-        {/* room display: wall-facing TV (falls back to a render screen while loading) */}
-        <RoomScreen accent={dev.color} />
 
         {/* low reception desk at the opening, carrying the developer name (wood) */}
         <mesh position={[0, 0.45, 1.35]} castShadow receiveShadow material={deskWood}>

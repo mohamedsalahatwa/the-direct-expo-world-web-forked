@@ -1,159 +1,74 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Meeting } from "@immersive/shared";
-import { listMeetings, createMeeting, deleteMeeting } from "../api";
-import { getDeveloper, FIRST_DEVELOPER } from "../scene/developers";
-import type { Developer } from "../scene/developers";
+import { createMeeting } from "../api";
+import { getDeveloper, FIRST_DEVELOPER, DEVELOPERS } from "../scene/developers";
 
 /* -------------------------------------------------------------------------- */
-/*  Inline Google Meet scheduler (revealed from the panel CTA)                */
+/*  BoothPanel — compact developer card / modal on the right                  */
 /* -------------------------------------------------------------------------- */
 
-function defaultStart(): string {
-  const d = new Date(Date.now() + 60 * 60 * 1000);
-  d.setMinutes(0, 0, 0);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+export interface BoothPanelProps {
+  /** Developer to show; null closes the card (slides out). */
+  developerId: string | null;
+  onClose: () => void;
 }
 
-function MeetScheduler({ dev }: { dev: Developer }) {
-  const [title, setTitle] = useState("");
-  const [startTime, setStartTime] = useState(defaultStart());
-  const [attendees, setAttendees] = useState("");
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
+/**
+ * A compact floating card that slides in from the right with a developer's key
+ * details — logo, name, booth number, location — plus a clickable video-meeting
+ * row and a primary "Join meeting" button. It never covers or dims the 3D scene,
+ * so visitors keep exploring while it's open. Selecting another booth swaps the
+ * content in place.
+ */
+export function BoothPanel({ developerId, onClose }: BoothPanelProps) {
+  const open = developerId !== null;
+
+  // Keep showing the last developer's content while the card slides out, so the
+  // close animation doesn't flash empty.
+  const [shownId, setShownId] = useState<string | null>(developerId);
+  const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Re-seed whenever a different developer's booth is shown.
+  // Reset the meeting state whenever a different developer's booth is shown.
   useEffect(() => {
-    setTitle(`${dev.name} — Investor Meeting`);
-    setAttendees(dev.contact);
-  }, [dev.id, dev.name, dev.contact]);
+    if (developerId !== null) {
+      setShownId(developerId);
+      setMeeting(null);
+      setError(null);
+      setBusy(false);
+    }
+  }, [developerId]);
 
-  const refresh = () => {
-    listMeetings()
-      .then(setMeetings)
-      .catch((e) => setError(String(e)));
-  };
-  useEffect(refresh, []);
+  const dev = getDeveloper(shownId ?? FIRST_DEVELOPER.id);
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  // Booth number is the developer's position on the floor roster (1-based).
+  const boothNumber = Math.max(0, DEVELOPERS.findIndex((d) => d.id === dev.id)) + 1;
+  const boothLabel = `Booth #${String(boothNumber).padStart(2, "0")}`;
+
+  // Create an instant Google Meet for this booth (once), then open it. A second
+  // click just re-opens the already-created link rather than spawning another.
+  async function handleJoin() {
+    if (meeting) {
+      window.open(meeting.meetLink, "_blank", "noopener,noreferrer");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      await createMeeting({
-        title,
-        startTime: new Date(startTime).toISOString(),
-        attendees: attendees.split(",").map((a) => a.trim()).filter(Boolean),
+      const m = await createMeeting({
+        title: `${dev.name} — Investor Meeting`,
+        startTime: new Date().toISOString(),
+        attendees: dev.contact ? [dev.contact] : [],
       });
-      refresh();
+      setMeeting(m);
+      window.open(m.meetLink, "_blank", "noopener,noreferrer");
     } catch (err) {
       setError(String(err));
     } finally {
       setBusy(false);
     }
   }
-
-  async function onDelete(id: string) {
-    try {
-      await deleteMeeting(id);
-      refresh();
-    } catch (err) {
-      setError(String(err));
-    }
-  }
-
-  return (
-    <div className="bp-meet-form">
-      <form onSubmit={onSubmit}>
-        <label>
-          Title
-          <input value={title} onChange={(e) => setTitle(e.target.value)} required />
-        </label>
-        <label>
-          Start
-          <input
-            type="datetime-local"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            required
-          />
-        </label>
-        <label>
-          Attendees (comma-separated emails)
-          <input
-            value={attendees}
-            onChange={(e) => setAttendees(e.target.value)}
-            placeholder="alice@example.com, bob@example.com"
-          />
-        </label>
-        <button type="submit" className="bp-submit" disabled={busy}>
-          {busy ? "Scheduling…" : "Schedule Meet"}
-        </button>
-      </form>
-
-      {error && <p className="bp-error">{error}</p>}
-
-      {meetings.length > 0 && (
-        <div className="bp-meetings">
-          <h4>Upcoming ({meetings.length})</h4>
-          <ul>
-            {meetings.map((m) => (
-              <li key={m.id}>
-                <div className="bp-meeting-info">
-                  <strong>{m.title}</strong>
-                  <span>{new Date(m.startTime).toLocaleString()}</span>
-                  <a href={m.meetLink} target="_blank" rel="noreferrer">
-                    {m.meetLink}
-                  </a>
-                </div>
-                <button className="bp-del" onClick={() => onDelete(m.id)} aria-label="Delete meeting">
-                  ✕
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*  BoothPanel — floating, non-blocking developer details                    */
-/* -------------------------------------------------------------------------- */
-
-export interface BoothPanelProps {
-  /** Developer to show; null closes the panel (slides out). */
-  developerId: string | null;
-  onClose: () => void;
-}
-
-/**
- * A floating glassmorphism panel that slides in from the right with a
- * developer's full profile. It never covers or dims the 3D scene — the rest of
- * the viewport stays fully visible and interactive — so visitors keep
- * exploring while reading. Only one panel is ever shown; selecting another
- * booth swaps the content in place.
- */
-export function BoothPanel({ developerId, onClose }: BoothPanelProps) {
-  const open = developerId !== null;
-
-  // Keep showing the last developer's content while the panel slides out, so
-  // the close animation doesn't flash empty.
-  const [shownId, setShownId] = useState<string | null>(developerId);
-  const [meetOpen, setMeetOpen] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (developerId !== null) {
-      setShownId(developerId);
-      setMeetOpen(false); // collapse the scheduler when switching booths
-      scrollRef.current?.scrollTo({ top: 0 });
-    }
-  }, [developerId]);
-
-  const dev = getDeveloper(shownId ?? FIRST_DEVELOPER.id);
 
   return (
     <aside
@@ -165,12 +80,12 @@ export function BoothPanel({ developerId, onClose }: BoothPanelProps) {
         ✕
       </button>
 
-      <div className="bp-scroll" ref={scrollRef}>
+      <div className="bp-card">
         <header className="bp-head">
           <div className="bp-logo">{dev.monogram}</div>
           <div className="bp-head-text">
             <h2 className="bp-name">{dev.name}</h2>
-            <span className="bp-tagline">{dev.tagline}</span>
+            <span className="bp-booth">{boothLabel}</span>
           </div>
         </header>
 
@@ -184,57 +99,28 @@ export function BoothPanel({ developerId, onClose }: BoothPanelProps) {
           {dev.location}
         </div>
 
-        <p className="bp-desc">{dev.description}</p>
+        {/* clickable video-meeting row */}
+        <button className="bp-video" onClick={handleJoin} disabled={busy}>
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M15 8.5V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-2.5l4 3.5V5l-4 3.5Z"
+            />
+          </svg>
+          <span className="bp-video-text">
+            <strong>Video meeting</strong>
+            <span>{meeting ? "Open meeting link" : "Google Meet"}</span>
+          </span>
+          <span className="bp-video-go" aria-hidden="true">
+            →
+          </span>
+        </button>
 
-        <section className="bp-section">
-          <h3 className="bp-h3">Featured Projects</h3>
-          <ul className="bp-projects">
-            {dev.projects.map((p) => (
-              <li key={p.name}>
-                <span className="bp-proj-name">{p.name}</span>
-                <span className="bp-proj-meta">
-                  {p.type} · <em>{p.status}</em>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <button className="bp-join" onClick={handleJoin} disabled={busy}>
+          {busy ? "Starting…" : "Join meeting"}
+        </button>
 
-        <section className="bp-section">
-          <h3 className="bp-h3">Gallery</h3>
-          <div className="bp-gallery">
-            {dev.gallery.map((g, i) => (
-              <div key={i} className="bp-tile" style={{ backgroundImage: g.gradient }}>
-                <span>{g.label}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="bp-section">
-          <h3 className="bp-h3">Contact</h3>
-          <div className="bp-contact">
-            <a href={`mailto:${dev.contact}`}>{dev.contact}</a>
-            <a href={`tel:${dev.phone.replace(/\s+/g, "")}`}>{dev.phone}</a>
-            <a href={`https://${dev.website}`} target="_blank" rel="noreferrer">
-              {dev.website}
-            </a>
-          </div>
-        </section>
-
-        <section className="bp-section bp-meet">
-          <button
-            className="bp-meet-btn"
-            onClick={() => setMeetOpen((o) => !o)}
-            aria-expanded={meetOpen}
-          >
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-              <path fill="currentColor" d="M15 8.5V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-2.5l4 3.5V5l-4 3.5Z" />
-            </svg>
-            {meetOpen ? "Hide scheduler" : "Schedule Google Meet"}
-          </button>
-          {meetOpen && <MeetScheduler dev={dev} />}
-        </section>
+        {error && <p className="bp-error">{error}</p>}
       </div>
     </aside>
   );
